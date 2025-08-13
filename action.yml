@@ -1,0 +1,278 @@
+name: "Pixcels Multi Source Cache"
+description: "Restore/save node_modules from internal S3, external GitHub cache, or source install."
+
+inputs:
+  netbird-connected:
+    description: "Whether Netbird is connected"
+    required: false
+    default: ""
+  s3-host-netbird:
+    description: "S3 host when Netbird is connected"
+    required: false
+    default: ""
+  s3-host-public:
+    description: "Public S3 host"
+    required: false
+    default: ""
+  s3-access-key:
+    description: "S3 Access Key"
+    required: true
+  s3-secret-key:
+    description: "S3 Secret Key"
+    required: true
+  s3-bucket:
+    description: "S3 Bucket"
+    required: true
+  s3-region:
+    description: "S3 Region"
+    required: false
+    default: ""
+  cache-key:
+    description: "Main cache key"
+    required: true
+  cache-restore-keys:
+    description: "Restore keys for partial matches"
+    required: false
+    default: ""
+  cache-path:
+    description: "Path to cache"
+    required: false
+    default: ""
+
+runs:
+  using: "composite"
+  steps:
+    # ----------------------
+    # 1) Internal S3 lookup
+    # ----------------------
+    - name: Debug — Before Internal S3 Lookup
+      shell: bash
+      run: |
+        set -x
+        echo "::group::[DEBUG] Before Internal S3 Lookup"
+        echo "cache-key: ${{ inputs.cache-key }}"
+        echo "restore-keys: ${{ inputs.cache-restore-keys }}"
+        echo "cache-path: ${{ inputs.cache-path }}"
+        echo "::endgroup::"
+
+    - name: Internal S3 Cache — Pre-check (lookup only)
+      id: internal-cache-lookup
+      uses: pi-xcels/action-pixcels-s3-cache@v0.0.1
+      with:
+        netbird-connected: ${{ inputs.netbird-connected }}
+        s3-host-netbird: ${{ inputs.s3-host-netbird }}
+        s3-host-public: ${{ inputs.s3-host-public }}
+        s3-access-key: ${{ inputs.s3-access-key }}
+        s3-secret-key: ${{ inputs.s3-secret-key }}
+        s3-bucket: ${{ inputs.s3-bucket }}
+        s3-region: ${{ inputs.s3-region }}
+        cache-key: ${{ inputs.cache-key }}
+        restore-keys: ${{ inputs.cache-restore-keys }}
+        cache-path: ${{ inputs.cache-path }}
+        restore-lookup-only: true
+
+    - name: Debug — After Internal S3 Lookup
+      shell: bash
+      run: |
+        set -x
+        echo "::group::[DEBUG] After Internal S3 Lookup"
+        echo "cache-hit: ${{ steps.internal-cache-lookup.outputs.cache-hit }}"
+        echo "::endgroup::"
+
+    # ----------------------
+    # 2) Internal S3 restore
+    # ----------------------
+    - name: Debug — Before Internal S3 Restore
+      if: ${{ steps.internal-cache-lookup.outputs.cache-hit == 'true' }}
+      shell: bash
+      run: |
+        set -x
+        echo "::group::[DEBUG] Before Internal S3 Restore"
+        echo "Restoring from internal S3"
+        echo "::endgroup::"
+
+    - name: Internal S3 Cache — Restore (if found)
+      if: ${{ steps.internal-cache-lookup.outputs.cache-hit == 'true' }}
+      id: internal-cache-restore
+      uses: pi-xcels/action-pixcels-s3-cache@v0.0.1
+      with:
+        netbird-connected: ${{ inputs.netbird-connected }}
+        s3-host-netbird: ${{ inputs.s3-host-netbird }}
+        s3-host-public: ${{ inputs.s3-host-public }}
+        s3-access-key: ${{ inputs.s3-access-key }}
+        s3-secret-key: ${{ inputs.s3-secret-key }}
+        s3-bucket: ${{ inputs.s3-bucket }}
+        s3-region: ${{ inputs.s3-region }}
+        cache-key: ${{ inputs.cache-key }}
+        restore-keys: ${{ inputs.cache-restore-keys }}
+        cache-path: ${{ inputs.cache-path }}
+
+    - name: Debug — After Internal S3 Restore
+      if: ${{ steps.internal-cache-lookup.outputs.cache-hit == 'true' }}
+      shell: bash
+      run: |
+        set -x
+        echo "::group::[DEBUG] After Internal S3 Restore"
+        echo "Restore completed."
+        echo "::endgroup::"
+
+    # ----------------------
+    # 3) External GitHub lookup
+    # ----------------------
+    - name: Debug — Before GitHub Cache Lookup
+      if: ${{ steps.internal-cache-lookup.outputs.cache-hit != 'true' }}
+      shell: bash
+      run: |
+        set -x
+        echo "::group::[DEBUG] Before GitHub Cache Lookup"
+        echo "cache-key: ${{ inputs.cache-key }}"
+        echo "restore-keys: ${{ inputs.cache-restore-keys }}"
+        echo "cache-path: ${{ inputs.cache-path }}"
+        echo "::endgroup::"
+
+    - name: GitHub Cache — Pre-check (lookup only)
+      if: ${{ steps.internal-cache-lookup.outputs.cache-hit != 'true' }}
+      id: external-cache-lookup
+      uses: actions/cache/restore@v4
+      with:
+        path: ${{ inputs.cache-path }}
+        key: ${{ inputs.cache-key }}
+        restore-keys: ${{ inputs.cache-restore-keys }}
+        lookup-only: true
+
+    - name: Debug — After GitHub Cache Lookup
+      if: ${{ steps.internal-cache-lookup.outputs.cache-hit != 'true' }}
+      shell: bash
+      run: |
+        set -x
+        echo "::group::[DEBUG] After GitHub Cache Lookup"
+        echo "cache-hit: ${{ steps.external-cache-lookup.outputs.cache-hit }}"
+        echo "::endgroup::"
+
+    # ----------------------
+    # 4) External GitHub restore
+    # ----------------------
+    - name: Debug — Before GitHub Cache Restore
+      if: ${{ steps.external-cache-lookup.outputs.cache-hit == 'true' }}
+      shell: bash
+      run: |
+        set -x
+        echo "::group::[DEBUG] Before GitHub Cache Restore"
+        echo "Restoring from GitHub Cache"
+        echo "::endgroup::"
+
+    - name: GitHub Cache — Restore (if found)
+      if: ${{ steps.external-cache-lookup.outputs.cache-hit == 'true' }}
+      id: external-cache-restore
+      uses: actions/cache/restore@v4
+      with:
+        path: ${{ inputs.cache-path }}
+        key: ${{ inputs.cache-key }}
+        restore-keys: ${{ inputs.cache-restore-keys }}
+
+    - name: Debug — After GitHub Cache Restore
+      if: ${{ steps.external-cache-lookup.outputs.cache-hit == 'true' }}
+      shell: bash
+      run: |
+        set -x
+        echo "::group::[DEBUG] After GitHub Cache Restore"
+        echo "Restore completed."
+        echo "::endgroup::"
+
+    # ----------------------
+    # 5) Log all results
+    # ----------------------
+    - name: Debug — All Cache Results
+      shell: bash
+      run: |
+        set -x
+        echo "::group::[DEBUG] Cache Summary"
+        echo "Internal S3 cache hit: ${{ steps.internal-cache-lookup.outputs.cache-hit }}"
+        echo "GitHub cache hit: ${{ steps.external-cache-lookup.outputs.cache-hit }}"
+        echo "::endgroup::"
+
+    # ----------------------
+    # 6) Setup Node if no cache anywhere
+    # ----------------------
+    - name: Debug — Before Node Setup
+      if: ${{ steps.internal-cache-lookup.outputs.cache-hit != 'true' && steps.external-cache-lookup.outputs.cache-hit != 'true' }}
+      shell: bash
+      run: |
+        set -x
+        echo "::group::[DEBUG] Before Node Setup"
+        echo "Installing Node because no cache was found."
+        echo "::endgroup::"
+
+    - name: Setup Node.js
+      if: ${{ steps.internal-cache-lookup.outputs.cache-hit != 'true' && steps.external-cache-lookup.outputs.cache-hit != 'true' }}
+      uses: actions/setup-node@v4
+      with:
+        node-version: 22.x
+        check-latest: true
+
+    # ----------------------
+    # 7) Install deps if no cache anywhere
+    # ----------------------
+    - name: Debug — Before Dependencies Install
+      if: ${{ steps.internal-cache-lookup.outputs.cache-hit != 'true' && steps.external-cache-lookup.outputs.cache-hit != 'true' }}
+      shell: bash
+      run: |
+        set -x
+        echo "::group::[DEBUG] Before Dependencies Install"
+        echo "Running npm ci && postinstall, then zipping node_modules."
+        echo "::endgroup::"
+
+    - name: Install dependencies
+      if: ${{ steps.internal-cache-lookup.outputs.cache-hit != 'true' && steps.external-cache-lookup.outputs.cache-hit != 'true' }}
+      shell: bash
+      run: |
+        npm ci && npm run postinstall
+        tar cvf - node_modules | gzip -9 - > node_modules.tar.gz
+
+    # ----------------------
+    # 8) Save to internal S3
+    # ----------------------
+    - name: Debug — Before Internal S3 Save
+      if: ${{ steps.internal-cache-lookup.outputs.cache-hit != 'true' && steps.external-cache-lookup.outputs.cache-hit != 'true' && inputs.netbird-connected == 'true' }}
+      shell: bash
+      run: |
+        set -x
+        echo "::group::[DEBUG] Before Internal S3 Save"
+        echo "Saving to internal S3."
+        echo "::endgroup::"
+
+    - name: Save Cache to Internal S3 (if Netbird connected)
+      if: ${{ steps.internal-cache-lookup.outputs.cache-hit != 'true' && steps.external-cache-lookup.outputs.cache-hit != 'true' && inputs.netbird-connected == 'true' }}
+      id: internal-cache-save
+      continue-on-error: true
+      uses: pi-xcels/action-pixcels-s3-cache@v0.0.1
+      with:
+        netbird-connected: ${{ inputs.netbird-connected }}
+        s3-host-netbird: ${{ inputs.s3-host-netbird }}
+        s3-host-public: ${{ inputs.s3-host-public }}
+        s3-access-key: ${{ inputs.s3-access-key }}
+        s3-secret-key: ${{ inputs.s3-secret-key }}
+        s3-bucket: ${{ inputs.s3-bucket }}
+        s3-region: ${{ inputs.s3-region }}
+        cache-key: ${{ inputs.cache-key }}
+        restore-keys: ${{ inputs.cache-restore-keys }}
+        cache-path: ${{ inputs.cache-path }}
+
+    # ----------------------
+    # 9) Fallback save to GitHub cache
+    # ----------------------
+    - name: Debug — Before GitHub Cache Save
+      if: ${{ steps.internal-cache-lookup.outputs.cache-hit != 'true' && steps.external-cache-lookup.outputs.cache-hit != 'true' && (inputs.netbird-connected != 'true' || steps.internal-cache-save.outcome != 'success') }}
+      shell: bash
+      run: |
+        set -x
+        echo "::group::[DEBUG] Before GitHub Cache Save"
+        echo "Saving to GitHub cache."
+        echo "::endgroup::"
+
+    - name: Save Cache to External GitHub (fallback)
+      if: ${{ steps.internal-cache-lookup.outputs.cache-hit != 'true' && steps.external-cache-lookup.outputs.cache-hit != 'true' && (inputs.netbird-connected != 'true' || steps.internal-cache-save.outcome != 'success') }}
+      uses: actions/cache/save@v4
+      with:
+        path: ${{ inputs.cache-path }}
+        key: ${{ inputs.cache-key }}
