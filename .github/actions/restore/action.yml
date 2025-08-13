@@ -1,4 +1,4 @@
-name: "Pixcels Cache Restore"
+name: "Cache Restore"
 description: "Restore cache from internal S3 or GitHub cache."
 inputs:
   netbird-connected:

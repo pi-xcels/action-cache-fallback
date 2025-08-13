@@ -1,4 +1,4 @@
-name: "Pixcels Cache Save"
+name: "Cache Save"
 description: "Save cache to internal S3 or fallback to GitHub cache."
 inputs:
   netbird-connected:
