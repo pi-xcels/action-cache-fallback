@@ -33,7 +33,7 @@ runs:
   steps:
     - name: Lookup caches
       id: lookup
-      uses: ./lookup
+      uses: ./.github/actions/lookup
       with:
         netbird-connected: ${{ inputs.netbird-connected }}
         s3-host-netbird: ${{ inputs.s3-host-netbird }}
