@@ -33,7 +33,7 @@ runs:
   steps:
     - name: Lookup caches
       id: lookup
-      uses: ./../lookup
+      uses: ./lookup
       with:
         netbird-connected: ${{ inputs.netbird-connected }}
         s3-host-netbird: ${{ inputs.s3-host-netbird }}
@@ -47,7 +47,7 @@ runs:
         cache-path: ${{ inputs.cache-path }}
 
     - name: Restore caches
-      uses: ./../restore
+      uses: ./restore
       with:
         netbird-connected: ${{ inputs.netbird-connected }}
         s3-host-netbird: ${{ inputs.s3-host-netbird }}
@@ -77,7 +77,7 @@ runs:
         tar cvf - node_modules | gzip -9 - > node_modules.tar.gz
 
     - name: Save caches
-      uses: ./../save
+      uses: ./save
       with:
         netbird-connected: ${{ inputs.netbird-connected }}
         s3-host-netbird: ${{ inputs.s3-host-netbird }}
