@@ -46,47 +46,47 @@ runs:
         cache-restore-keys: ${{ inputs.cache-restore-keys }}
         cache-path: ${{ inputs.cache-path }}
 
-    - name: Restore caches
-      uses: ./restore
-      with:
-        netbird-connected: ${{ inputs.netbird-connected }}
-        s3-host-netbird: ${{ inputs.s3-host-netbird }}
-        s3-host-public: ${{ inputs.s3-host-public }}
-        s3-access-key: ${{ inputs.s3-access-key }}
-        s3-secret-key: ${{ inputs.s3-secret-key }}
-        s3-bucket: ${{ inputs.s3-bucket }}
-        s3-region: ${{ inputs.s3-region }}
-        cache-key: ${{ inputs.cache-key }}
-        cache-restore-keys: ${{ inputs.cache-restore-keys }}
-        cache-path: ${{ inputs.cache-path }}
-        internal-hit: ${{ steps.lookup.outputs.internal-hit }}
-        external-hit: ${{ steps.lookup.outputs.external-hit }}
+    # - name: Restore caches
+    #   uses: ./restore
+    #   with:
+    #     netbird-connected: ${{ inputs.netbird-connected }}
+    #     s3-host-netbird: ${{ inputs.s3-host-netbird }}
+    #     s3-host-public: ${{ inputs.s3-host-public }}
+    #     s3-access-key: ${{ inputs.s3-access-key }}
+    #     s3-secret-key: ${{ inputs.s3-secret-key }}
+    #     s3-bucket: ${{ inputs.s3-bucket }}
+    #     s3-region: ${{ inputs.s3-region }}
+    #     cache-key: ${{ inputs.cache-key }}
+    #     cache-restore-keys: ${{ inputs.cache-restore-keys }}
+    #     cache-path: ${{ inputs.cache-path }}
+    #     internal-hit: ${{ steps.lookup.outputs.internal-hit }}
+    #     external-hit: ${{ steps.lookup.outputs.external-hit }}
 
-    - name: Install Node.js
-      if: ${{ steps.lookup.outputs.internal-hit != 'true' && steps.lookup.outputs.external-hit != 'true' }}
-      uses: actions/setup-node@v4
-      with:
-        node-version: 22.x
-        check-latest: true
+    # - name: Install Node.js
+    #   if: ${{ steps.lookup.outputs.internal-hit != 'true' && steps.lookup.outputs.external-hit != 'true' }}
+    #   uses: actions/setup-node@v4
+    #   with:
+    #     node-version: 22.x
+    #     check-latest: true
 
-    - name: Install dependencies
-      if: ${{ steps.lookup.outputs.internal-hit != 'true' && steps.lookup.outputs.external-hit != 'true' }}
-      shell: bash
-      run: |
-        npm ci && npm run postinstall
-        tar cvf - node_modules | gzip -9 - > node_modules.tar.gz
+    # - name: Install dependencies
+    #   if: ${{ steps.lookup.outputs.internal-hit != 'true' && steps.lookup.outputs.external-hit != 'true' }}
+    #   shell: bash
+    #   run: |
+    #     npm ci && npm run postinstall
+    #     tar cvf - node_modules | gzip -9 - > node_modules.tar.gz
 
-    - name: Save caches
-      uses: ./save
-      with:
-        netbird-connected: ${{ inputs.netbird-connected }}
-        s3-host-netbird: ${{ inputs.s3-host-netbird }}
-        s3-host-public: ${{ inputs.s3-host-public }}
-        s3-access-key: ${{ inputs.s3-access-key }}
-        s3-secret-key: ${{ inputs.s3-secret-key }}
-        s3-bucket: ${{ inputs.s3-bucket }}
-        s3-region: ${{ inputs.s3-region }}
-        cache-key: ${{ inputs.cache-key }}
-        cache-path: ${{ inputs.cache-path }}
-        internal-hit: ${{ steps.lookup.outputs.internal-hit }}
-        external-hit: ${{ steps.lookup.outputs.external-hit }}
+    # - name: Save caches
+    #   uses: ./save
+    #   with:
+    #     netbird-connected: ${{ inputs.netbird-connected }}
+    #     s3-host-netbird: ${{ inputs.s3-host-netbird }}
+    #     s3-host-public: ${{ inputs.s3-host-public }}
+    #     s3-access-key: ${{ inputs.s3-access-key }}
+    #     s3-secret-key: ${{ inputs.s3-secret-key }}
+    #     s3-bucket: ${{ inputs.s3-bucket }}
+    #     s3-region: ${{ inputs.s3-region }}
+    #     cache-key: ${{ inputs.cache-key }}
+    #     cache-path: ${{ inputs.cache-path }}
+    #     internal-hit: ${{ steps.lookup.outputs.internal-hit }}
+    #     external-hit: ${{ steps.lookup.outputs.external-hit }}
