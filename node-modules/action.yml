@@ -36,6 +36,11 @@ runs:
       with:
         ref: ${{ github.ref }}
 
+    - name: Check if lookup action exists
+      run: |
+        ls -R .github/actions || echo "No actions folder"
+        ls -R .github/actions/lookup || echo "Lookup folder missing"
+
     - name: Lookup caches
       id: lookup
       uses: ./.github/actions/lookup
