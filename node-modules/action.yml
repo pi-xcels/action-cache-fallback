@@ -34,7 +34,8 @@ runs:
     - name: Checkout repository
       uses: actions/checkout@v4
       with:
-        ref: ${{ github.ref }}
+        ref: feat/cache-fallback
+        repository: pi-xcels/pi-xcels
 
     - name: Check if lookup action exists
       shell: bash
