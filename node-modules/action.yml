@@ -35,7 +35,7 @@ runs:
       uses: actions/checkout@v4
       with:
         ref: feat/cache-fallback
-        repository: pi-xcels/pi-xcels
+        repository: pi-xcels/action-cache-fallback
 
     - name: Check if lookup action exists
       shell: bash
