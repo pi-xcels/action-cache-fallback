@@ -36,7 +36,7 @@ runs:
       with:
         ref: feat/cache-fallback
         repository: pi-xcels/action-cache-fallback
-        path: /tmp/cache-fallback
+        path: .github/actions/cache-fallback
 
     - name: Check if lookup action exists
       shell: bash
@@ -46,7 +46,7 @@ runs:
 
     - name: Lookup caches
       id: lookup
-      uses: /tmp/cache-fallback/.github/actions/lookup
+      uses: ./.github/actions/cache-fallback/.github/actions/lookup
       with:
         netbird-connected: ${{ inputs.netbird-connected }}
         s3-host-netbird: ${{ inputs.s3-host-netbird }}
@@ -60,7 +60,7 @@ runs:
         cache-path: ${{ inputs.cache-path }}
 
     - name: Restore caches
-      uses: /tmp/cache-fallback/.github/actions/restore
+      uses: ./.github/actions/cache-fallback/.github/actions/restore
       with:
         netbird-connected: ${{ inputs.netbird-connected }}
         s3-host-netbird: ${{ inputs.s3-host-netbird }}
@@ -90,7 +90,7 @@ runs:
         tar cvf - node_modules | gzip -9 - > node_modules.tar.gz
 
     - name: Save caches
-      uses: /tmp/cache-fallback/.github/actions/save
+      uses: ./.github/actions/cache-fallback/.github/actions/save
       with:
         netbird-connected: ${{ inputs.netbird-connected }}
         s3-host-netbird: ${{ inputs.s3-host-netbird }}
