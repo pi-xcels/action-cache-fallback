@@ -1,0 +1,127 @@
+name: "Multi Source Checkout Cache"
+description: "Restore/save checkout from internal S3, GitHub cache, or checkout + cached repo artifacts"
+inputs:
+  netbird-connected:
+    required: false
+    default: ""
+  s3-host-netbird:
+    required: false
+    default: ""
+  s3-host-public:
+    required: false
+    default: ""
+  s3-access-key:
+    required: true
+  s3-secret-key:
+    required: true
+  s3-bucket:
+    required: true
+  s3-region:
+    required: false
+    default: ""
+  cache-key:
+    required: true
+  cache-restore-keys:
+    required: false
+    default: ""
+  cache-path:
+    description: "Path to checkout the repository into. Defaults to ./checkout."
+    required: false
+    default: "checkout"
+  repository:
+    description: 'Repository name and owner in the format "owner/repo". Defaults to current.'
+    required: false
+    default: ${{ github.repository }}
+  ref:
+    description: "Branch, tag, or SHA to checkout. Defaults to current ref."
+    required: false
+    default: ${{ github.ref }}
+  token:
+    description: "Token to use for checkout. Defaults to GITHUB_TOKEN."
+    required: false
+    default: ${{ github.token }}
+
+outputs:
+  cache-hit:
+    description: "Boolean indicating if the checkout artifact was restored."
+    value: ${{ steps.check-artifact.outputs.restored }}
+
+runs:
+  using: composite
+  steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        ref: feat/cache-fallback
+        repository: pi-xcels/action-cache-fallback
+        path: .github/actions/cache-fallback
+
+    - name: Check if lookup action exists
+      shell: bash
+      run: |
+        ls -R .github/actions || echo "No actions folder"
+        ls -R .github/actions/lookup || echo "Lookup folder missing"
+
+    - name: Lookup caches
+      id: lookup
+      uses: ./.github/actions/cache-fallback/.github/actions/lookup
+      with:
+        netbird-connected: ${{ inputs.netbird-connected }}
+        s3-host-netbird: ${{ inputs.s3-host-netbird }}
+        s3-host-public: ${{ inputs.s3-host-public }}
+        s3-access-key: ${{ inputs.s3-access-key }}
+        s3-secret-key: ${{ inputs.s3-secret-key }}
+        s3-bucket: ${{ inputs.s3-bucket }}
+        s3-region: ${{ inputs.s3-region }}
+        cache-key: ${{ inputs.cache-key }}
+        cache-restore-keys: ${{ inputs.cache-restore-keys }}
+        cache-path: ${{ inputs.cache-path }}
+
+    - name: Restore caches
+      uses: ./.github/actions/cache-fallback/.github/actions/restore
+      with:
+        netbird-connected: ${{ inputs.netbird-connected }}
+        s3-host-netbird: ${{ inputs.s3-host-netbird }}
+        s3-host-public: ${{ inputs.s3-host-public }}
+        s3-access-key: ${{ inputs.s3-access-key }}
+        s3-secret-key: ${{ inputs.s3-secret-key }}
+        s3-bucket: ${{ inputs.s3-bucket }}
+        s3-region: ${{ inputs.s3-region }}
+        cache-key: ${{ inputs.cache-key }}
+        cache-restore-keys: ${{ inputs.cache-restore-keys }}
+        cache-path: ${{ inputs.cache-path }}
+        internal-hit: ${{ steps.lookup.outputs.internal-hit }}
+        external-hit: ${{ steps.lookup.outputs.external-hit }}
+
+    - name: Checkout repository (if artifact not restored)
+      if: ${{ steps.lookup.outputs.internal-hit != 'true' && steps.lookup.outputs.external-hit != 'true' }}
+      uses: actions/checkout@v4
+      with:
+        repository: ${{ inputs.repository }}
+        ref: ${{ inputs.ref }}
+        token: ${{ inputs.token }}
+        path: ${{ inputs.cache-path }}
+        fetch-depth: 0
+
+    - name: Save caches
+      uses: ./.github/actions/cache-fallback/.github/actions/save
+      with:
+        netbird-connected: ${{ inputs.netbird-connected }}
+        s3-host-netbird: ${{ inputs.s3-host-netbird }}
+        s3-host-public: ${{ inputs.s3-host-public }}
+        s3-access-key: ${{ inputs.s3-access-key }}
+        s3-secret-key: ${{ inputs.s3-secret-key }}
+        s3-bucket: ${{ inputs.s3-bucket }}
+        s3-region: ${{ inputs.s3-region }}
+        cache-key: ${{ inputs.cache-key }}
+        cache-path: ${{ inputs.cache-path }}
+        internal-hit: ${{ steps.lookup.outputs.internal-hit }}
+        external-hit: ${{ steps.lookup.outputs.external-hit }}
+
+    - name: Move contents to root
+      if: ${{ steps.lookup.outputs.internal-hit != 'true' && steps.lookup.outputs.external-hit != 'true' }}
+      shell: bash
+      run: |
+        echo "Moving contents of ${{ inputs.cache-path }} to ./"
+        cp -a "${{ inputs.cache-path }}/." ./
+        rm -rf "${{ inputs.cache-path }}"
