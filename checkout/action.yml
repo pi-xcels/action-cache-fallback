@@ -15,15 +15,17 @@ inputs:
   s3-secret-key:
     required: true
   s3-bucket:
-    required: true
+    required: false
+    default: "actions-cache"
   s3-region:
     required: false
-    default: ""
+    default: "us-east-1"
   cache-key:
-    required: true
+    required: false
+    default: pixcels-checkout-${{ github.sha }}
   cache-restore-keys:
     required: false
-    default: ""
+    default: pixcels-checkout-${{ github.sha }}
   cache-path:
     description: "Path to checkout the repository into. Defaults to ./checkout."
     required: false
