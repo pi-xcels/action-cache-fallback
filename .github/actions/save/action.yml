@@ -46,7 +46,7 @@ runs:
     - name: Save Cache to Internal S3
       if: ${{ inputs.internal-hit != 'true' && inputs.external-hit != 'true' && inputs.netbird-connected == 'true' }}
       id: internal-cache-save
-      uses: pi-xcels/action-s3-cache@v0.0.1
+      uses: pi-xcels/action-s3-cache@v0.0.2
       with:
         netbird-connected: ${{ inputs.netbird-connected }}
         s3-host: ${{ inputs.s3-host }}

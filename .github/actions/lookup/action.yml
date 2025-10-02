@@ -48,7 +48,7 @@ runs:
 
     - name: Internal S3 Cache — Pre-check (lookup only)
       id: internal-cache-lookup
-      uses: pi-xcels/action-s3-cache@v0.0.1
+      uses: pi-xcels/action-s3-cache@v0.0.2
       with:
         netbird-connected: ${{ inputs.netbird-connected }}
         s3-host: ${{ inputs.s3-host }}
