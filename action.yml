@@ -6,12 +6,8 @@ inputs:
     description: "Whether Netbird is connected"
     required: false
     default: ""
-  s3-host-netbird:
+  s3-host:
     description: "S3 host when Netbird is connected"
-    required: false
-    default: ""
-  s3-host-public:
-    description: "Public S3 host"
     required: false
     default: ""
   s3-access-key:
@@ -60,8 +56,7 @@ runs:
       uses: pi-xcels/action-s3-cache@v0.0.1
       with:
         netbird-connected: ${{ inputs.netbird-connected }}
-        s3-host-netbird: ${{ inputs.s3-host-netbird }}
-        s3-host-public: ${{ inputs.s3-host-public }}
+        s3-host: ${{ inputs.s3-host }}
         s3-access-key: ${{ inputs.s3-access-key }}
         s3-secret-key: ${{ inputs.s3-secret-key }}
         s3-bucket: ${{ inputs.s3-bucket }}
@@ -97,8 +92,7 @@ runs:
       uses: pi-xcels/action-s3-cache@v0.0.1
       with:
         netbird-connected: ${{ inputs.netbird-connected }}
-        s3-host-netbird: ${{ inputs.s3-host-netbird }}
-        s3-host-public: ${{ inputs.s3-host-public }}
+        s3-host: ${{ inputs.s3-host }}
         s3-access-key: ${{ inputs.s3-access-key }}
         s3-secret-key: ${{ inputs.s3-secret-key }}
         s3-bucket: ${{ inputs.s3-bucket }}
@@ -248,8 +242,7 @@ runs:
       uses: pi-xcels/action-s3-cache@v0.0.1
       with:
         netbird-connected: ${{ inputs.netbird-connected }}
-        s3-host-netbird: ${{ inputs.s3-host-netbird }}
-        s3-host-public: ${{ inputs.s3-host-public }}
+        s3-host: ${{ inputs.s3-host }}
         s3-access-key: ${{ inputs.s3-access-key }}
         s3-secret-key: ${{ inputs.s3-secret-key }}
         s3-bucket: ${{ inputs.s3-bucket }}
