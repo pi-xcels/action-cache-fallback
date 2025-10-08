@@ -1,0 +1,103 @@
+name: "Cache Lookup"
+description: "Lookup cache from internal S3 or GitHub cache."
+inputs:
+  netbird-connected:
+    required: false
+    default: ""
+  s3-host:
+    required: false
+    default: ""
+  s3-access-key:
+    required: true
+  s3-secret-key:
+    required: true
+  s3-bucket:
+    required: true
+  s3-region:
+    required: false
+    default: ""
+  cache-key:
+    required: true
+  cache-restore-keys:
+    required: false
+    default: ""
+  cache-path:
+    required: false
+    default: ""
+outputs:
+  internal-hit:
+    value: ${{ steps.internal-cache-lookup.outputs.cache-hit }}
+  external-hit:
+    value: ${{ steps.external-cache-lookup.outputs.cache-hit }}
+
+runs:
+  using: composite
+  steps:
+    # ----------------------
+    # 1) Internal S3 lookup
+    # ----------------------
+    - name: Debug — Before Internal S3 Lookup
+      shell: bash
+      run: |
+        set -x
+        echo "::group::[DEBUG] Before Internal S3 Lookup"
+        echo "cache-key: ${{ inputs.cache-key }}"
+        echo "restore-keys: ${{ inputs.cache-restore-keys }}"
+        echo "cache-path: ${{ inputs.cache-path }}"
+        echo "::endgroup::"
+
+    - name: Internal S3 Cache — Pre-check (lookup only)
+      id: internal-cache-lookup
+      uses: pi-xcels/action-s3-cache@v0.0.2
+      with:
+        netbird-connected: ${{ inputs.netbird-connected }}
+        s3-host: ${{ inputs.s3-host }}
+        s3-access-key: ${{ inputs.s3-access-key }}
+        s3-secret-key: ${{ inputs.s3-secret-key }}
+        s3-bucket: ${{ inputs.s3-bucket }}
+        s3-region: ${{ inputs.s3-region }}
+        cache-key: ${{ inputs.cache-key }}
+        restore-keys: ${{ inputs.cache-restore-keys }}
+        cache-path: ${{ inputs.cache-path }}
+        restore-lookup-only: true
+
+    - name: Debug — After Internal S3 Lookup
+      shell: bash
+      run: |
+        set -x
+        echo "::group::[DEBUG] After Internal S3 Lookup"
+        echo "cache-hit: ${{ steps.internal-cache-lookup.outputs.cache-hit }}"
+        echo "::endgroup::"
+
+    # ----------------------
+    # 3) External GitHub lookup
+    # ----------------------
+    - name: Debug — Before GitHub Cache Lookup
+      if: ${{ steps.internal-cache-lookup.outputs.cache-hit != 'true' }}
+      shell: bash
+      run: |
+        set -x
+        echo "::group::[DEBUG] Before GitHub Cache Lookup"
+        echo "cache-key: ${{ inputs.cache-key }}"
+        echo "restore-keys: ${{ inputs.cache-restore-keys }}"
+        echo "cache-path: ${{ inputs.cache-path }}"
+        echo "::endgroup::"
+
+    - name: GitHub Cache — Pre-check (lookup only)
+      if: ${{ steps.internal-cache-lookup.outputs.cache-hit != 'true' }}
+      id: external-cache-lookup
+      uses: actions/cache/restore@v4
+      with:
+        path: ${{ inputs.cache-path }}
+        key: ${{ inputs.cache-key }}
+        restore-keys: ${{ inputs.cache-restore-keys }}
+        lookup-only: true
+
+    - name: Debug — After GitHub Cache Lookup
+      if: ${{ steps.internal-cache-lookup.outputs.cache-hit != 'true' }}
+      shell: bash
+      run: |
+        set -x
+        echo "::group::[DEBUG] After GitHub Cache Lookup"
+        echo "cache-hit: ${{ steps.external-cache-lookup.outputs.cache-hit }}"
+        echo "::endgroup::"

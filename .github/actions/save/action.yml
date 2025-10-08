@@ -1,0 +1,77 @@
+name: "Cache Save"
+description: "Save cache to internal S3 or fallback to GitHub cache."
+inputs:
+  netbird-connected:
+    required: false
+    default: ""
+  s3-host:
+    required: false
+    default: ""
+  s3-access-key:
+    required: true
+  s3-secret-key:
+    required: true
+  s3-bucket:
+    required: true
+  s3-region:
+    required: false
+    default: ""
+  cache-key:
+    required: true
+  cache-path:
+    required: false
+    default: ""
+  internal-hit:
+    required: false
+    default: ""
+  external-hit:
+    required: false
+    default: ""
+
+runs:
+  using: composite
+  steps:
+    # ----------------------
+    # 8) Save to internal S3
+    # ----------------------
+    - name: Debug — Before Internal S3 Save
+      if: ${{ steps.internal-cache-lookup.outputs.cache-hit != 'true' && steps.external-cache-lookup.outputs.cache-hit != 'true' && inputs.netbird-connected == 'true' }}
+      shell: bash
+      run: |
+        set -x
+        echo "::group::[DEBUG] Before Internal S3 Save"
+        echo "Saving to internal S3."
+        echo "::endgroup::"
+
+    - name: Save Cache to Internal S3
+      if: ${{ inputs.internal-hit != 'true' }}
+      id: internal-cache-save
+      uses: pi-xcels/action-s3-cache@v0.0.2
+      with:
+        netbird-connected: ${{ inputs.netbird-connected }}
+        s3-host: ${{ inputs.s3-host }}
+        s3-access-key: ${{ inputs.s3-access-key }}
+        s3-secret-key: ${{ inputs.s3-secret-key }}
+        s3-bucket: ${{ inputs.s3-bucket }}
+        s3-region: ${{ inputs.s3-region }}
+        cache-key: ${{ inputs.cache-key }}
+        cache-path: ${{ inputs.cache-path }}
+
+    # ----------------------
+    # 9) Fallback save to GitHub cache
+    # ----------------------
+    - name: Debug — Before GitHub Cache Save
+      if: ${{ steps.internal-cache-lookup.outputs.cache-hit != 'true' && steps.external-cache-lookup.outputs.cache-hit != 'true' && (inputs.netbird-connected != 'true' || steps.internal-cache-save.outcome != 'success') }}
+      shell: bash
+      run: |
+        set -x
+        echo "::group::[DEBUG] Before GitHub Cache Save"
+        echo "Saving to GitHub cache."
+        echo "::endgroup::"
+
+    - name: Save Cache to External GitHub (fallback)
+      if: ${{ inputs.internal-hit != 'true' && inputs.external-hit != 'true' && (inputs.netbird-connected != 'true' || steps.internal-cache-save.outcome != 'success') }}
+      uses: actions/cache/save@v4
+      with:
+        path: ${{ inputs.cache-path }}
+        key: ${{ inputs.cache-key }}

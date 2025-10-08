@@ -1,0 +1,85 @@
+name: "Multi Source Nx Cache"
+description: "Restore/save Nx cache from internal S3, GitHub cache"
+inputs:
+  netbird-connected:
+    required: false
+    default: ""
+  s3-host:
+    required: false
+    default: ""
+  s3-access-key:
+    required: true
+  s3-secret-key:
+    required: true
+  s3-bucket:
+    required: true
+  s3-region:
+    required: false
+    default: ""
+  cache-key:
+    required: true
+  cache-restore-keys:
+    required: false
+    default: ""
+  cache-path:
+    required: false
+    default: ""
+
+runs:
+  using: composite
+  steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        ref: feat/cache-fallback
+        repository: pi-xcels/action-cache-fallback
+        path: .github/actions/cache-fallback
+
+    - name: Check if lookup action exists
+      shell: bash
+      run: |
+        ls -R .github/actions || echo "No actions folder"
+        ls -R .github/actions/lookup || echo "Lookup folder missing"
+
+    - name: Lookup caches
+      id: lookup
+      uses: ./.github/actions/cache-fallback/.github/actions/lookup
+      with:
+        netbird-connected: ${{ inputs.netbird-connected }}
+        s3-host: ${{ inputs.s3-host }}
+        s3-access-key: ${{ inputs.s3-access-key }}
+        s3-secret-key: ${{ inputs.s3-secret-key }}
+        s3-bucket: ${{ inputs.s3-bucket }}
+        s3-region: ${{ inputs.s3-region }}
+        cache-key: ${{ inputs.cache-key }}
+        cache-restore-keys: ${{ inputs.cache-restore-keys }}
+        cache-path: ${{ inputs.cache-path }}
+
+    - name: Restore caches
+      uses: ./.github/actions/cache-fallback/.github/actions/restore
+      with:
+        netbird-connected: ${{ inputs.netbird-connected }}
+        s3-host: ${{ inputs.s3-host }}
+        s3-access-key: ${{ inputs.s3-access-key }}
+        s3-secret-key: ${{ inputs.s3-secret-key }}
+        s3-bucket: ${{ inputs.s3-bucket }}
+        s3-region: ${{ inputs.s3-region }}
+        cache-key: ${{ inputs.cache-key }}
+        cache-restore-keys: ${{ inputs.cache-restore-keys }}
+        cache-path: ${{ inputs.cache-path }}
+        internal-hit: ${{ steps.lookup.outputs.internal-hit }}
+        external-hit: ${{ steps.lookup.outputs.external-hit }}
+
+    - name: Save caches
+      uses: ./.github/actions/cache-fallback/.github/actions/save
+      with:
+        netbird-connected: ${{ inputs.netbird-connected }}
+        s3-host: ${{ inputs.s3-host }}
+        s3-access-key: ${{ inputs.s3-access-key }}
+        s3-secret-key: ${{ inputs.s3-secret-key }}
+        s3-bucket: ${{ inputs.s3-bucket }}
+        s3-region: ${{ inputs.s3-region }}
+        cache-key: ${{ inputs.cache-key }}
+        cache-path: ${{ inputs.cache-path }}
+        internal-hit: ${{ steps.lookup.outputs.internal-hit }}
+        external-hit: ${{ steps.lookup.outputs.external-hit }}

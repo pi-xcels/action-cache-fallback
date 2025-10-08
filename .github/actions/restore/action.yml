@@ -1,0 +1,111 @@
+name: "Cache Restore"
+description: "Restore cache from internal S3 or GitHub cache."
+inputs:
+  netbird-connected:
+    required: false
+    default: ""
+  s3-host:
+    required: false
+    default: ""
+  s3-access-key:
+    required: true
+  s3-secret-key:
+    required: true
+  s3-bucket:
+    required: true
+  s3-region:
+    required: false
+    default: ""
+  cache-key:
+    required: true
+  cache-restore-keys:
+    required: false
+    default: ""
+  cache-path:
+    required: false
+    default: ""
+  internal-hit:
+    required: false
+    default: ""
+  external-hit:
+    required: false
+    default: ""
+
+runs:
+  using: composite
+  steps:
+    # ----------------------
+    # 2) Internal S3 restore
+    # ----------------------
+    - name: Debug — Before Internal S3 Restore
+      if: ${{ steps.internal-cache-lookup.outputs.cache-hit == 'true' }}
+      shell: bash
+      run: |
+        set -x
+        echo "::group::[DEBUG] Before Internal S3 Restore"
+        echo "Restoring from internal S3"
+        echo "::endgroup::"
+
+    - name: Internal S3 Cache — Restore
+      if: ${{ inputs.internal-hit == 'true' }}
+      uses: pi-xcels/action-s3-cache@v0.0.2
+      with:
+        netbird-connected: ${{ inputs.netbird-connected }}
+        s3-host: ${{ inputs.s3-host }}
+        s3-access-key: ${{ inputs.s3-access-key }}
+        s3-secret-key: ${{ inputs.s3-secret-key }}
+        s3-bucket: ${{ inputs.s3-bucket }}
+        s3-region: ${{ inputs.s3-region }}
+        cache-key: ${{ inputs.cache-key }}
+        restore-keys: ${{ inputs.cache-restore-keys }}
+        cache-path: ${{ inputs.cache-path }}
+
+    - name: Debug — After Internal S3 Restore
+      if: ${{ steps.internal-cache-lookup.outputs.cache-hit == 'true' }}
+      shell: bash
+      run: |
+        set -x
+        echo "::group::[DEBUG] After Internal S3 Restore"
+        echo "Restore completed."
+        echo "::endgroup::"
+
+    # ----------------------
+    # 4) External GitHub restore
+    # ----------------------
+    - name: Debug — Before GitHub Cache Restore
+      if: ${{ steps.external-cache-lookup.outputs.cache-hit == 'true' }}
+      shell: bash
+      run: |
+        set -x
+        echo "::group::[DEBUG] Before GitHub Cache Restore"
+        echo "Restoring from GitHub Cache"
+        echo "::endgroup::"
+
+    - name: GitHub Cache — Restore
+      if: ${{ inputs.internal-hit != 'true' && inputs.external-hit == 'true' }}
+      uses: actions/cache/restore@v4
+      with:
+        path: ${{ inputs.cache-path }}
+        key: ${{ inputs.cache-key }}
+        restore-keys: ${{ inputs.cache-restore-keys }}
+
+    - name: Debug — After GitHub Cache Restore
+      if: ${{ steps.external-cache-lookup.outputs.cache-hit == 'true' }}
+      shell: bash
+      run: |
+        set -x
+        echo "::group::[DEBUG] After GitHub Cache Restore"
+        echo "Restore completed."
+        echo "::endgroup::"
+
+    # ----------------------
+    # 5) Log all results
+    # ----------------------
+    - name: Debug — All Cache Results
+      shell: bash
+      run: |
+        set -x
+        echo "::group::[DEBUG] Cache Summary"
+        echo "Internal S3 cache hit: ${{ steps.internal-cache-lookup.outputs.cache-hit }}"
+        echo "GitHub cache hit: ${{ steps.external-cache-lookup.outputs.cache-hit }}"
+        echo "::endgroup::"

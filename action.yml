@@ -6,12 +6,8 @@ inputs:
     description: "Whether Netbird is connected"
     required: false
     default: ""
-  s3-host-netbird:
+  s3-host:
     description: "S3 host when Netbird is connected"
-    required: false
-    default: ""
-  s3-host-public:
-    description: "Public S3 host"
     required: false
     default: ""
   s3-access-key:
@@ -57,11 +53,10 @@ runs:
 
     - name: Internal S3 Cache — Pre-check (lookup only)
       id: internal-cache-lookup
-      uses: pi-xcels/action-pixcels-s3-cache@v0.0.1
+      uses: pi-xcels/action-s3-cache@v0.0.2
       with:
         netbird-connected: ${{ inputs.netbird-connected }}
-        s3-host-netbird: ${{ inputs.s3-host-netbird }}
-        s3-host-public: ${{ inputs.s3-host-public }}
+        s3-host: ${{ inputs.s3-host }}
         s3-access-key: ${{ inputs.s3-access-key }}
         s3-secret-key: ${{ inputs.s3-secret-key }}
         s3-bucket: ${{ inputs.s3-bucket }}
@@ -94,11 +89,10 @@ runs:
     - name: Internal S3 Cache — Restore (if found)
       if: ${{ steps.internal-cache-lookup.outputs.cache-hit == 'true' }}
       id: internal-cache-restore
-      uses: pi-xcels/action-pixcels-s3-cache@v0.0.1
+      uses: pi-xcels/action-s3-cache@v0.0.2
       with:
         netbird-connected: ${{ inputs.netbird-connected }}
-        s3-host-netbird: ${{ inputs.s3-host-netbird }}
-        s3-host-public: ${{ inputs.s3-host-public }}
+        s3-host: ${{ inputs.s3-host }}
         s3-access-key: ${{ inputs.s3-access-key }}
         s3-secret-key: ${{ inputs.s3-secret-key }}
         s3-bucket: ${{ inputs.s3-bucket }}
@@ -245,11 +239,10 @@ runs:
       if: ${{ steps.internal-cache-lookup.outputs.cache-hit != 'true' && steps.external-cache-lookup.outputs.cache-hit != 'true' && inputs.netbird-connected == 'true' }}
       id: internal-cache-save
       continue-on-error: true
-      uses: pi-xcels/action-pixcels-s3-cache@v0.0.1
+      uses: pi-xcels/action-s3-cache@v0.0.2
       with:
         netbird-connected: ${{ inputs.netbird-connected }}
-        s3-host-netbird: ${{ inputs.s3-host-netbird }}
-        s3-host-public: ${{ inputs.s3-host-public }}
+        s3-host: ${{ inputs.s3-host }}
         s3-access-key: ${{ inputs.s3-access-key }}
         s3-secret-key: ${{ inputs.s3-secret-key }}
         s3-bucket: ${{ inputs.s3-bucket }}
