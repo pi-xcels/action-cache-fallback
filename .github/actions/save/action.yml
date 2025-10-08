@@ -44,7 +44,7 @@ runs:
         echo "::endgroup::"
 
     - name: Save Cache to Internal S3
-      if: ${{ inputs.internal-hit != 'true' && inputs.external-hit != 'true' && inputs.netbird-connected == 'true' }}
+      if: ${{ inputs.internal-hit != 'true' }}
       id: internal-cache-save
       uses: pi-xcels/action-s3-cache@v0.0.2
       with:
