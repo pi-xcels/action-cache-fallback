@@ -51,7 +51,6 @@ runs:
     - name: Checkout repository
       uses: actions/checkout@v4
       with:
-        ref: ${{ github.ref }}
         repository: pi-xcels/action-cache-fallback
         path: .github/actions/cache-fallback
 
