@@ -1,40 +1,60 @@
 name: "Multi Source Checkout Cache"
 description: "Restore/save checkout from internal S3, GitHub cache, or checkout + cached repo artifacts"
+
 inputs:
   netbird-connected:
+    description: "Whether NetBird is connected and available for internal cache access."
     required: false
     default: ""
+
   s3-host:
+    description: "S3-compatible endpoint hostname for external cache storage."
     required: false
     default: ""
+
   s3-access-key:
+    description: "Access key used to authenticate with the S3-compatible cache backend."
     required: true
+
   s3-secret-key:
+    description: "Secret key used to authenticate with the S3-compatible cache backend."
     required: true
+
   s3-bucket:
+    description: "S3 bucket name used to store and restore cache artifacts."
     required: false
     default: "actions-cache"
+
   s3-region:
+    description: "AWS region or equivalent region value for the S3-compatible cache backend."
     required: false
     default: "us-east-1"
+
   cache-key:
+    description: "Exact cache key to use for lookup and save. Defaults to a SHA-based checkout key when omitted."
     required: false
-    default: pixcels-checkout-${{ github.sha }}
+    default: ""
+
   cache-restore-keys:
+    description: "Fallback restore key prefixes to use when an exact cache key match is not found."
     required: false
-    default: pixcels-checkout-${{ github.sha }}
+    default: ""
+
   cache-path:
     description: "Path to checkout the repository into. Defaults to ./checkout."
     required: false
     default: "checkout"
+
   repository:
     description: 'Repository name and owner in the format "owner/repo". Defaults to current.'
     required: false
     default: ${{ github.repository }}
-  ref:
-    description: "Branch, tag, or SHA to checkout. Defaults to current ref."
+
+  sha:
+    description: "Commit SHA to checkout. Defaults to the workflow commit SHA (github.sha). Required when repository != github.repository."
     required: false
-    default: ${{ github.ref }}
+    default: ""
+
   token:
     description: "Token to use for checkout. Defaults to GITHUB_TOKEN."
     required: false
@@ -43,7 +63,7 @@ inputs:
 outputs:
   cache-hit:
     description: "Boolean indicating if the checkout artifact was restored."
-    value: ${{ steps.check-artifact.outputs.restored }}
+    value: ${{ steps.lookup.outputs.internal-hit == 'true' || steps.lookup.outputs.external-hit == 'true' }}
 
 runs:
   using: composite
@@ -61,6 +81,54 @@ runs:
         ls -R .github/actions || echo "No actions folder"
         ls -R .github/actions/lookup || echo "Lookup folder missing"
 
+    - name: Compute effective inputs
+      id: compute
+      shell: bash
+      run: |
+        set -euo pipefail
+
+        requested_repo="${{ inputs.repository }}"
+        workflow_repo="${{ github.repository }}"
+
+        sha_input="${{ inputs.sha }}"
+        workflow_sha="${{ github.sha }}"
+
+        if [ -z "$sha_input" ]; then
+          if [ "$requested_repo" != "$workflow_repo" ]; then
+            echo "::error::inputs.sha is required when inputs.repository != github.repository (repository='$requested_repo', github.repository='$workflow_repo')."
+            exit 1
+          fi
+
+          sha_input="$workflow_sha"
+        fi
+
+        if ! printf '%s' "$sha_input" | tr -d '\n' | grep -Eq '^[0-9a-fA-F]{40}$'; then
+          echo "::error::inputs.sha must be a full 40-character hex SHA-1 (got '$sha_input')."
+          exit 1
+        fi
+
+        cache_key_input="${{ inputs.cache-key }}"
+        cache_restore_keys_input="${{ inputs.cache-restore-keys }}"
+
+        effective_cache_key="$cache_key_input"
+        if [ -z "$effective_cache_key" ]; then
+          effective_cache_key="pixcels-checkout-$sha_input"
+        fi
+
+        effective_restore_keys="$cache_restore_keys_input"
+        if [ -z "$effective_restore_keys" ]; then
+          effective_restore_keys="$effective_cache_key"
+        fi
+
+        {
+          echo "repository=$requested_repo"
+          echo "sha=$sha_input"
+          echo "cache_key=$effective_cache_key"
+          echo "cache_restore_keys<<EOF"
+          printf '%s\n' "$effective_restore_keys"
+          echo "EOF"
+        } >> "$GITHUB_OUTPUT"
+
     - name: Lookup caches
       id: lookup
       uses: ./.github/actions/cache-fallback/.github/actions/lookup
@@ -71,8 +139,8 @@ runs:
         s3-secret-key: ${{ inputs.s3-secret-key }}
         s3-bucket: ${{ inputs.s3-bucket }}
         s3-region: ${{ inputs.s3-region }}
-        cache-key: ${{ inputs.cache-key }}
-        cache-restore-keys: ${{ inputs.cache-restore-keys }}
+        cache-key: ${{ steps.compute.outputs.cache_key }}
+        cache-restore-keys: ${{ steps.compute.outputs.cache_restore_keys }}
         cache-path: ${{ inputs.cache-path }}
 
     - name: Restore caches
@@ -84,8 +152,8 @@ runs:
         s3-secret-key: ${{ inputs.s3-secret-key }}
         s3-bucket: ${{ inputs.s3-bucket }}
         s3-region: ${{ inputs.s3-region }}
-        cache-key: ${{ inputs.cache-key }}
-        cache-restore-keys: ${{ inputs.cache-restore-keys }}
+        cache-key: ${{ steps.compute.outputs.cache_key }}
+        cache-restore-keys: ${{ steps.compute.outputs.cache_restore_keys }}
         cache-path: ${{ inputs.cache-path }}
         internal-hit: ${{ steps.lookup.outputs.internal-hit }}
         external-hit: ${{ steps.lookup.outputs.external-hit }}
@@ -94,8 +162,8 @@ runs:
       if: ${{ steps.lookup.outputs.internal-hit != 'true' && steps.lookup.outputs.external-hit != 'true' }}
       uses: actions/checkout@v4
       with:
-        repository: ${{ inputs.repository }}
-        ref: ${{ inputs.ref }}
+        repository: ${{ steps.compute.outputs.repository }}
+        ref: ${{ steps.compute.outputs.sha }}
         token: ${{ inputs.token }}
         path: ${{ inputs.cache-path }}
         fetch-depth: 0
@@ -109,7 +177,7 @@ runs:
         s3-secret-key: ${{ inputs.s3-secret-key }}
         s3-bucket: ${{ inputs.s3-bucket }}
         s3-region: ${{ inputs.s3-region }}
-        cache-key: ${{ inputs.cache-key }}
+        cache-key: ${{ steps.compute.outputs.cache_key }}
         cache-path: ${{ inputs.cache-path }}
         internal-hit: ${{ steps.lookup.outputs.internal-hit }}
         external-hit: ${{ steps.lookup.outputs.external-hit }}
